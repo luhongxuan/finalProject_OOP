@@ -27,6 +27,10 @@ public class Maze extends JFrame {
 		this.setLayout(new BorderLayout());
 		this.setPreferredSize(new Dimension(COLS * CELL_SIZE, (ROWS + 6) * CELL_SIZE));
 
+		this.statusArea = new JTextArea(3, 30);
+		this.statusArea.setEditable(false);
+		this.add(new JScrollPane(this.statusArea), BorderLayout.SOUTH);
+
 		this.generateMaze();
 		
 		this.algoSelector = new JComboBox<>(new String[] {"BFS", "DFS"});
@@ -59,6 +63,7 @@ public class Maze extends JFrame {
 		this.carve(1, 1);
 		this.map[1][1] = 1;
 		this.map[ROWS - 2][COLS - 2] = 1;
+		this.statusArea.setText("New maze generated. Ready to search!");
 	}
 	
 	private void carve(int r, int c) {
@@ -94,12 +99,13 @@ public class Maze extends JFrame {
 				e.printStackTrace();
 			}
 			if (selectAlgo.equals("DFS")) {
-				this.solveDFS(1, 1);
+				this.startSolveDFS(1, 1);
 			}else if (selectAlgo.equals("BFS")) {
 				this.solveBFS(1, 1);
 			}
 			isAnimating = false;
 		}).start();
+		this.statusArea.setText("Searching using " + selectAlgo + "...");
 	}
 
 	private void resetPath() {
@@ -113,9 +119,19 @@ public class Maze extends JFrame {
 		this.mazePanel.repaint();
 	}
 
+	int nodesDFSVisited = 0;
+	private void startSolveDFS(int startRow, int startCol) {
+		if(startRow < 0 || startRow >= ROWS || startCol < 0 || startCol >= COLS) return;
+		long startTime = System.currentTimeMillis();
+		this.solveDFS(startRow, startCol);
+		long duration = System.currentTimeMillis() - startTime;
+		this.statusArea.setText("DFS completed! Nodes visited: " + this.nodesDFSVisited + ". Time taken: " + duration + " ms.");
+	}
+
 	private boolean solveDFS(int r, int c) {
 		if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return false;
 		map[r][c] = 3;
+		this.nodesDFSVisited++;
 
 		this.mazePanel.repaint();
 
@@ -167,6 +183,8 @@ public class Maze extends JFrame {
 			e.printStackTrace();
 		}
 
+		int nodeVisited = 0;
+		long startTime = System.currentTimeMillis();
 		boolean found = false;
 
 		while(!deque.isEmpty()){
@@ -174,6 +192,7 @@ public class Maze extends JFrame {
 			int r = current[0];
 			int c = current[1];
 
+			nodeVisited++;
 			if(r == ROWS - 2 && c == COLS - 2){
 				found = true;
 				break;
@@ -219,6 +238,8 @@ public class Maze extends JFrame {
 			}
 			map[startRow][startCol] = 2;
 			this.mazePanel.repaint();
+			long duration = System.currentTimeMillis() - startTime;
+			this.statusArea.setText("BFS completed! Nodes visited: " + nodeVisited + ". Time taken: " + duration + " ms.");
 		}
 	}
 
