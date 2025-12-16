@@ -45,19 +45,6 @@ public class Maze extends JFrame {
 		this.editBtn = new JButton("Edit Mode: OFF");
 		this.clearMapBtn = new JButton("Clear Map");
 
-		this.editBtn.addActionListener(e -> {
-			isEditing = !isEditing;
-			if(isEditing) {
-				this.editBtn.setText("Edit Mode: ON");
-				this.statusArea.setText("Edit mode enabled. Click cells to toggle walls.");
-				this.searchBtn.setEnabled(false);
-			}else{
-				this.editBtn.setText("Edit Mode: OFF");
-				this.statusArea.setText("Edit mode disabled.");
-				this.searchBtn.setEnabled(true);
-			}
-		});
-
 		this.controlPanel = new JPanel();
 		this.controlPanel.add(new JLabel("Algorithm:"));
 		this.controlPanel.add(this.algoSelector);
@@ -82,6 +69,18 @@ public class Maze extends JFrame {
 		});
 		this.searchBtn.addActionListener(e -> this.startSearch());
 		this.clearMapBtn.addActionListener(e -> this.clearMap());
+		this.editBtn.addActionListener(e -> {
+			isEditing = !isEditing;
+			if(isEditing) {
+				this.editBtn.setText("Edit Mode: ON");
+				this.statusArea.setText("Edit mode enabled. Click cells to toggle walls.");
+				this.searchBtn.setEnabled(false);
+			}else{
+				this.editBtn.setText("Edit Mode: OFF");
+				this.statusArea.setText("Edit mode disabled.");
+				this.searchBtn.setEnabled(true);
+			}
+		});
 
 		this.mazeMouseAdapter = new MouseAdapter() {
 			@Override
