@@ -8,24 +8,30 @@ import java.util.Deque;
 import java.util.ArrayDeque;
 
 public class Maze extends JFrame {
-	private final int  CELL_SIZE = 20;
+	private final int  CELL_SIZE = 25;
 	private final int ROWS = 21;
 	private final int COLS = 21;
 	private int[][] map;
 	private boolean isAnimating = false;
-	
+	private boolean isEditing = false;
+
+	private JPanel mapContainer;
 	private MazePanel mazePanel;
 	private JTextArea statusArea;
 	private JComboBox<String> algoSelector;
 	private JButton generateBtn;
 	private JButton searchBtn;
-	private JPanel controlPanel = new JPanel();
+	private JButton editBtn;
+	private JButton clearMapBtn;
+	private JPanel controlPanel;
+
+	private MouseAdapter mazeMouseAdapter;
 	
 	public Maze() {
 		super("Java Maze Solver (BFS / DFS)");
 		this.setDefaultCloseOperation(this.EXIT_ON_CLOSE);
 		this.setLayout(new BorderLayout());
-		this.setPreferredSize(new Dimension(COLS * CELL_SIZE, (ROWS + 6) * CELL_SIZE));
+		this.setPreferredSize(new Dimension((COLS + 10) * CELL_SIZE, (ROWS + 10) * CELL_SIZE));
 
 		this.statusArea = new JTextArea(3, 30);
 		this.statusArea.setEditable(false);
@@ -36,14 +42,37 @@ public class Maze extends JFrame {
 		this.algoSelector = new JComboBox<>(new String[] {"BFS", "DFS"});
 		this.generateBtn = new JButton("Generate Maze");
 		this.searchBtn = new JButton("Search Path");
+		this.editBtn = new JButton("Edit Mode: OFF");
+		this.clearMapBtn = new JButton("Clear Map");
 
-		controlPanel.add(new JLabel("Algorithm:"));
-		controlPanel.add(algoSelector);
-		controlPanel.add(generateBtn);
-		controlPanel.add(searchBtn);
+		this.editBtn.addActionListener(e -> {
+			isEditing = !isEditing;
+			if(isEditing) {
+				this.editBtn.setText("Edit Mode: ON");
+				this.statusArea.setText("Edit mode enabled. Click cells to toggle walls.");
+				this.searchBtn.setEnabled(false);
+			}else{
+				this.editBtn.setText("Edit Mode: OFF");
+				this.statusArea.setText("Edit mode disabled.");
+				this.searchBtn.setEnabled(true);
+			}
+		});
 
+		this.controlPanel = new JPanel();
+		this.controlPanel.add(new JLabel("Algorithm:"));
+		this.controlPanel.add(this.algoSelector);
+		this.controlPanel.add(this.generateBtn);
+		this.controlPanel.add(this.searchBtn);
+		this.controlPanel.add(this.editBtn);
+		this.controlPanel.add(this.clearMapBtn);
+
+		this.mapContainer = new JPanel(new GridBagLayout());
+		this.mapContainer.setBackground(Color.DARK_GRAY);
+		
 		this.mazePanel = new MazePanel(this.map);
-		this.add(mazePanel, BorderLayout.CENTER);
+		this.mapContainer.add(this.mazePanel);
+
+		this.add(this.mapContainer, BorderLayout.CENTER);
 
 		this.generateBtn.addActionListener(e -> {
 			if(isAnimating) return;
@@ -52,6 +81,22 @@ public class Maze extends JFrame {
 			this.mazePanel.repaint();
 		});
 		this.searchBtn.addActionListener(e -> this.startSearch());
+		this.clearMapBtn.addActionListener(e -> this.clearMap());
+
+		this.mazeMouseAdapter = new MouseAdapter() {
+			@Override
+			public void mousePressed(MouseEvent e) {
+				Maze.this.handleMouseInput(e);
+			}
+
+			@Override
+			public void mouseDragged(MouseEvent e) {
+				Maze.this.handleMouseInput(e);
+			}
+		};
+
+		this.mazePanel.addMouseListener(this.mazeMouseAdapter);
+		this.mazePanel.addMouseMotionListener(this.mazeMouseAdapter);
 		
 		this.add(controlPanel, BorderLayout.NORTH);
 		this.pack();
@@ -81,6 +126,15 @@ public class Maze extends JFrame {
 				carve(nr, nc);
 			}
 		}
+	}
+
+	private void clearMap() {
+		for(int r = 1; r < ROWS - 1; r++) {
+			for(int c = 1; c < COLS - 1; c++) {
+				map[r][c] = 1;
+			}
+		}
+		this.mazePanel.repaint();
 	}
 
 	public void startSearch() {
@@ -123,9 +177,13 @@ public class Maze extends JFrame {
 	private void startSolveDFS(int startRow, int startCol) {
 		if(startRow < 0 || startRow >= ROWS || startCol < 0 || startCol >= COLS) return;
 		long startTime = System.currentTimeMillis();
-		this.solveDFS(startRow, startCol);
-		long duration = System.currentTimeMillis() - startTime;
-		this.statusArea.setText("DFS completed! Nodes visited: " + this.nodesDFSVisited + ". Time taken: " + duration + " ms.");
+		if(this.solveDFS(startRow, startCol)){
+			long duration = System.currentTimeMillis() - startTime;
+			this.statusArea.setText("DFS completed! Nodes visited: " + this.nodesDFSVisited + ". Time taken: " + duration + " ms.");
+		}else{
+			long duration = System.currentTimeMillis() - startTime;
+			this.statusArea.setText("DFS failed! No path found. Nodes visited: " + this.nodesDFSVisited + ". Time taken: " + duration + " ms.");
+		}		
 	}
 
 	private boolean solveDFS(int r, int c) {
@@ -240,6 +298,34 @@ public class Maze extends JFrame {
 			this.mazePanel.repaint();
 			long duration = System.currentTimeMillis() - startTime;
 			this.statusArea.setText("BFS completed! Nodes visited: " + nodeVisited + ". Time taken: " + duration + " ms.");
+		}else{
+			long duration = System.currentTimeMillis() - startTime;
+			this.statusArea.setText("BFS failed! No path found. Nodes visited: " + nodeVisited + ". Time taken: " + duration + " ms.");
+		}
+	}
+
+	private int paintMode = 0;
+	private void handleMouseInput(MouseEvent e) {
+		if (!isEditing) return;
+		
+		int c = e.getX() / CELL_SIZE;
+		int r = e.getY() / CELL_SIZE;
+
+		if (r >= 0 && r < ROWS && c >= 0 && c < COLS) {
+			if ((r == 1 && c == 1) || (r == ROWS - 2 && c == COLS - 2)) return;
+
+			if(e.getID() == MouseEvent.MOUSE_PRESSED) {
+				if (map[r][c] == 1) {
+					this.paintMode = 0;
+				}else{
+					this.paintMode = 1;
+				}
+				map[r][c] = this.paintMode;
+			}else if (e.getID() == MouseEvent.MOUSE_DRAGGED) {
+				map[r][c] = this.paintMode;
+			}
+
+			this.mazePanel.repaint();
 		}
 	}
 

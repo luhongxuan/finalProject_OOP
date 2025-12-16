@@ -4,7 +4,7 @@ import java.awt.*;
 public class MazePanel extends JPanel {
     private int[][] map;
     private JPanel controlPanel;
-    private final int CELL_SIZE = 20;
+    private final int CELL_SIZE = 25;
     private final int ROWS = 21;
     private final int COLS = 21;
 
